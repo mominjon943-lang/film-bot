@@ -1,0 +1,94 @@
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler
+import os
+
+TOKEN = os.environ.get('BOT_TOKEN', '8593311791:AAGbxWHLUW5-jiu6h5YuI-1zp7rd6pkQyOc')
+CHANNELS = ['@salomfilm', '@salomserials', '@salommarvel']
+
+FILMS = {
+    '1': 'https://t.me/film100kun/4',
+    '2': 'https://t.me/salomfilms/38',
+    '3': 'https://t.me/salomfilms/39',
+    '4': 'https://t.me/salomfilms/37',
+    '5': 'https://t.me/salomfilms/35',
+    '6': 'https://t.me/salomfilms/34',
+    '7': 'https://t.me/salomfilms/33',
+    '8': 'https://t.me/salomfilms/32',
+    '9': 'https://t.me/salomfilms/31',
+    '10': 'https://t.me/salomfilms/30'
+}
+
+async def check_sub(user_id, context):
+    not_sub = []
+    for ch in CHANNELS:
+        try:
+            m = await context.bot.get_chat_member(ch, user_id)
+            if m.status in ['left', 'kicked']:
+                not_sub.append(ch)
+        except:
+            not_sub.append(ch)
+    return len(not_sub) == 0, not_sub
+
+def get_buttons(channels):
+    kb = []
+    for i, ch in enumerate(channels, 1):
+        kb.append([InlineKeyboardButton(f"📢 {i}-Kanal", url=f"https://t.me/{ch[1:]}")])
+    kb.append([InlineKeyboardButton("✅ Tekshirish", callback_data="check")])
+    return InlineKeyboardMarkup(kb)
+
+async def start(update, context):
+    uid = update.effective_user.id
+    ok, nots = await check_sub(uid, context)
+    if ok:
+        await update.message.reply_text("Marxamat film Kodini yuboring ! 🔰")
+    else:
+        await update.message.reply_text(
+            "Film ko'rish uchun obuna bo'ling ! 👇🏻🎬",
+            reply_markup=get_buttons(CHANNELS)
+        )
+
+async def check_callback(update, context):
+    q = update.callback_query
+    await q.answer()
+    uid = update.effective_user.id
+    ok, nots = await check_sub(uid, context)
+    if ok:
+        await q.edit_message_text("Marxamat film Kodini yuboring ! 🔰")
+    else:
+        await q.edit_message_text(
+            "Film ko'rish uchun obuna bo'ling ! 👇🏻🎬",
+            reply_markup=get_buttons(CHANNELS)
+        )
+
+async def film(update, context):
+    uid = update.effective_user.id
+    kod = update.message.text.strip()
+    ok, nots = await check_sub(uid, context)
+    
+    if not ok:
+        await update.message.reply_text(
+            "Film ko'rish uchun obuna bo'ling ! 👇🏻🎬",
+            reply_markup=get_buttons(CHANNELS)
+        )
+        return
+    
+    if kod in FILMS:
+        link = FILMS[kod]
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=link
+        )
+        await update.message.reply_text("Maroqli Tomosha 🍿")
+    else:
+        await update.message.reply_text("Bunday film yo'q!")
+
+def main():
+    app = Application.builder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CallbackQueryHandler(check_callback, pattern="check"))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, film))
+    print("✅ Bot ishga tushdi!")
+    app.run_polling()
+
+if __name__ == '__main__':
+    main()
